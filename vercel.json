@@ -1,0 +1,16 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "api/casaciones.js",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/casaciones",
+        "dest": "api/casaciones.js"
+      }
+    ]
+  }
+  
