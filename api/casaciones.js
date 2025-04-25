@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer';
+import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 export default async function handler(req, res) {
   const pageNumber = parseInt(req.query.page) || 1;
@@ -6,14 +7,20 @@ export default async function handler(req, res) {
     ? 'https://lpderecho.pe/category/jurisprudencia/casacion/'
     : `https://lpderecho.pe/category/jurisprudencia/casacion/page/${pageNumber}/`;
 
+  let browser = null;
+
   try {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    const executablePath = await chromium.executablePath;
+
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: chromium.headless
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2' });
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
     const results = await page.evaluate(() => {
       const articles = [];
@@ -36,10 +43,13 @@ export default async function handler(req, res) {
       return articles;
     });
 
-    await browser.close();
     res.status(200).json(results.slice(0, 5));
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error('❌ Error al hacer scraping:', error);
     res.status(500).json({ error: 'Error scraping casaciones' });
+  } finally {
+    if (browser !== null) {
+      await browser.close();
+    }
   }
 }
