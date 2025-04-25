@@ -10,21 +10,29 @@ export default async function handler(req, res) {
   let browser = null;
 
   try {
-    const executablePath = await chromium.executablePath;
-
+    console.log('🚀 Lanzando navegador...');
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath,
+      executablePath: await chromium.executablePath,
       headless: chromium.headless
     });
 
+    console.log('🌐 Abriendo nueva página...');
     const page = await browser.newPage();
+
+    console.log(`🔗 Navegando a: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
+    console.log('🔍 Ejecutando scraping...');
     const results = await page.evaluate(() => {
       const articles = [];
-      document.querySelectorAll('.td_module_3.td_module_wrap').forEach((el) => {
+      const nodes = document.querySelectorAll('.td_module_3.td_module_wrap');
+      if (nodes.length === 0) {
+        throw new Error('⚠️ No se encontraron artículos');
+      }
+
+      nodes.forEach((el) => {
         const anchor = el.querySelector('h3.entry-title a');
         const img = el.querySelector('.td-module-thumb img');
         const author = el.querySelector('.td-post-author-name a');
@@ -43,6 +51,7 @@ export default async function handler(req, res) {
       return articles;
     });
 
+    console.log('✅ Scraping exitoso');
     res.status(200).json(results.slice(0, 5));
   } catch (error) {
     console.error('❌ Error al hacer scraping:', error);
